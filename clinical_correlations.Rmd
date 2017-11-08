@@ -1,0 +1,349 @@
+---
+title: "Correlations between CT and clinical parameters"
+output: html_notebook
+---
+
+
+Get the data.
+```{r}
+raw_data <- read.csv2("C:/Users/csuehs/Dropbox/SCANN'AIR_fractal_dimension/FD_data/Expi.csv")
+raw_data2 <- read.csv("C:/Users/csuehs/Dropbox/SCANN'AIR_princeps/data-verification/Data_scannair_NA_corrections_isaetcarey_20170427.csv")
+```
+
+Extract the appropriate variables. We are interested in raw FD values for attentuation at -850HU and according to two factors: 
+
+* inspiratory versus expiratory measures;
+* upper versus lower lung.
+      ---slice 1
+      ---slice 10
+```{r}
+
+df_fd <- data.frame(raw_data$numpat,
+                  raw_data$I.850.H1,
+                  raw_data$I.850.H10,
+                  raw_data$I.850.L1,
+                  raw_data$I.850.L10,
+                  raw_data$E.850.H1,
+                  raw_data$E.850.H10,
+                  raw_data$E.850.L1,
+                  raw_data$E.850.L10)
+
+colnames(df_fd) <- c("patient",
+                   "fd_i_up_1", 
+                    "fd_i_up_10", 
+                    "fd_i_lo_1", 
+                    "fd_i_lo_10", 
+                    "fd_e_up_1", 
+                    "fd_e_up_10", 
+                    "fd_e_lo_1", 
+                    "fd_e_lo_10")
+
+
+
+df_fd$fd_ei_up_1 <- df_fd$fd_e_up_1 / df_fd$fd_i_up_1
+df_fd$fd_ei_up_10 <- df_fd$fd_e_up_10 / df_fd$fd_i_up_10
+
+df_fd$fd_ei_lo_1 <- df_fd$fd_e_lo_1 / df_fd$fd_i_lo_1
+df_fd$fd_ei_lo_10 <- df_fd$fd_e_lo_10 / df_fd$fd_i_lo_10
+
+
+df_fd$fd_i_up <- (df_fd$fd_i_up_1 + df_fd$fd_i_up_10)/2
+df_fd$fd_i_lo <- (df_fd$fd_i_lo_1 + df_fd$fd_i_lo_10)/2
+
+df_fd$fd_e_up <- (df_fd$fd_e_up_1 + df_fd$fd_e_up_10)/2
+df_fd$fd_e_lo <- (df_fd$fd_e_lo_1 + df_fd$fd_e_lo_10)/2
+
+df_fd$fd_ei_up <- (df_fd$fd_ei_up_1+df_fd$fd_ei_up_10)/2
+df_fd$fd_ei_lo <- (df_fd$fd_ei_lo_1+df_fd$fd_ei_lo_10)/2
+
+df_fd$fd_i_delta <- df_fd$fd_i_up - df_fd$fd_i_lo  
+df_fd$fd_e_delta <- df_fd$fd_e_up - df_fd$fd_e_lo 
+df_fd$fd_ei_delta <- df_fd$fd_ei_up - df_fd$fd_ei_lo 
+
+df_fd$fd_i_av <- (df_fd$fd_i_up + df_fd$fd_i_lo) /2
+df_fd$fd_e_av <- (df_fd$fd_e_up + df_fd$fd_e_lo) /2
+df_fd$fd_ei_av <- (df_fd$fd_ei_up + df_fd$fd_ei_lo) /2
+
+df_fd$fd_i_bias <- (df_fd$fd_i_delta / df_fd$fd_i_av) *100
+df_fd$fd_e_bias <- (df_fd$fd_e_delta / df_fd$fd_e_av) *100
+df_fd$fd_ei_bias <- (df_fd$fd_ei_delta / df_fd$fd_ei_av) *100
+
+df_fd[,grep("_1", names(df_fd))] <- NULL
+df_fd[,grep("delta", names(df_fd))] <- NULL
+
+df_fd$fd_e_bias[is.nan(df_fd$fd_e_bias)] <- 0
+df_fd$fd_ei_bias[is.nan(df_fd$fd_ei_bias)] <- 0
+
+head(df_fd)
+
+```
+
+
+
+
+Extract the appropriate MLD and clinical variables.
+```{r}
+df_mld <- data.frame(raw_data2$numpat,
+                     raw_data2$I_MLD_H_1,
+                     raw_data2$I_MLD_B_1,
+                     raw_data2$E_MLD_H_1,
+                     raw_data2$E_MLD_B_1,
+                     raw_data2$age,
+                     raw_data2$BMI,
+                     raw_data2$ACQ6,
+                     raw_data2$VEMSp_1,
+                     raw_data2$CVFp_1,
+                     raw_data2$VEMS.CVF_1,
+                     raw_data2$valeur_no_ex,
+                     raw_data2$valeur_no_alveo)
+    
+
+colnames(df_mld) <- c("patient",
+                      "mld_i_up",
+                      "mld_i_lo",
+                      "mld_e_up",
+                      "mld_e_lo",
+                      "age",
+                      "bmi",
+                      "acq",
+                      "fev1",
+                      "fvc",
+                      "f.f",
+                      "feno",
+                      "fano")
+
+df_mld$mld_ei_up <- df_mld$mld_e_up/df_mld$mld_i_up
+df_mld$mld_ei_lo <- df_mld$mld_e_lo/df_mld$mld_i_lo
+
+df_mld$mld_i_delta <- df_mld$mld_i_up - df_mld$mld_i_lo 
+df_mld$mld_e_delta <- df_mld$mld_e_up - df_mld$mld_e_lo 
+df_mld$mld_ei_delta <- df_mld$mld_ei_up - df_mld$mld_ei_lo 
+
+df_mld$mld_i_av <- (df_mld$mld_i_up + df_mld$mld_i_lo)/2 
+df_mld$mld_e_av <- (df_mld$mld_e_up + df_mld$mld_e_lo)/2
+df_mld$mld_ei_av <- (df_mld$mld_ei_up + df_mld$mld_ei_lo)/2
+
+df_mld$mld_i_bias <- (df_mld$mld_i_delta / df_mld$mld_i_av) *100
+df_mld$mld_e_bias <- (df_mld$mld_e_delta / df_mld$mld_e_av) *100
+df_mld$mld_ei_bias <- (df_mld$mld_ei_delta / df_mld$mld_ei_av) *100
+
+df_mld[,grep("delta", names(df_mld))] <- NULL
+
+head(df_mld)
+
+```
+
+Do some data wrangling to make a dataframe with only those CT vars we want, in the order we want.
+```{r}
+df <- merge(df_mld, df_fd, by = "patient", all.x = TRUE)
+
+df$acq <- as.numeric(as.character(df$acq))
+
+ct <- df[, c("fd_i_up",
+             "fd_i_lo",
+             "fd_i_av",
+             "mld_i_up",
+             "mld_i_lo",
+             "mld_i_av",
+             "fd_e_up",
+             "fd_e_lo",
+             "fd_e_av",
+             "mld_e_up",
+             "mld_e_lo",
+             "mld_e_av",
+             "fd_ei_up",
+             "fd_ei_lo",
+             "fd_ei_av",
+             "mld_ei_up",
+             "mld_ei_lo",
+             "mld_ei_av",
+             "fd_i_bias",
+             "fd_e_bias",
+             "fd_ei_bias",
+             "mld_i_bias",
+             "mld_e_bias",
+             "mld_ei_bias")]
+
+
+```
+
+Make functions for correlations and p-values.
+
+```{r}
+
+set.seed(123)
+
+age_cor <- function(x) {
+    age <- df$age
+    k <- data.frame(age, x)
+    ks <- subset(k, subset = (complete.cases(k)))
+    round(cor(ks$age, ks$x, method = c("spearman")), digits = 2)
+    }
+
+age_cor_test <- function(x) {   
+    age <- df$age
+    k <- data.frame(age, x)
+    ks <- subset(k, subset = (complete.cases((k))))
+    ct <- cor.test(ks$age, ks$x, method = c("spearman"))
+    round(ct[[3]], digits=3)
+    }
+
+bmi_cor <- function(x) {
+    bmi <- df$bmi
+    k <- data.frame(bmi, x)
+    ks <- subset(k, subset = (complete.cases(k)))
+    round(cor(ks$bmi, ks$x, method = c("spearman")), digits = 2)
+}
+
+bmi_cor_test <- function(x) {   
+    bmi <- df$bmi
+    k <- data.frame(bmi, x)
+    ks <- subset(k, subset = (complete.cases((k))))
+    ct <- cor.test(ks$bmi, ks$x, method = c("spearman"))
+    round(ct[[3]], digits=3)
+    }
+
+
+
+
+
+
+fev1_cor <- function(x) {
+    fev1 <- df$fev1
+    k <- data.frame(fev1, x)
+    ks <- subset(k, subset = (complete.cases((k))))
+    round(cor(ks$fev1, ks$x, method = c("spearman")), digits=2)}
+
+fev1_cor_test <- function(x) {   
+    fev1 <- df$fev1
+    k <- data.frame(fev1, x)
+    ks <- subset(k, subset = (complete.cases((k))))
+    ct <- cor.test(ks$fev1, ks$x, method = c("spearman"))
+    round(ct[[3]], digits=3)}
+
+
+
+fvc_cor <- function(x) {
+    fvc <- df$fvc
+    k <- data.frame(fvc, x)
+    ks <- subset(k, subset = (complete.cases((k))))
+    round(cor(ks$fvc, ks$x, method = c("spearman")), digits=2)}
+
+fvc_cor_test <- function(x) {   
+    fvc <- df$fvc
+    k <- data.frame(fvc, x)
+    ks <- subset(k, subset = (complete.cases((k))))
+    ct <- cor.test(ks$fvc, ks$x, method = c("spearman"))
+    round(ct[[3]], digits=3)}
+
+f.f_cor <- function(x) {
+    f.f <- df$f.f
+    k <- data.frame(f.f, x)
+    ks <- subset(k, subset = (complete.cases((k))))
+    round(cor(ks$f.f, ks$x, method = c("spearman")), digits=2)}
+
+f.f_cor_test <- function(x) {   
+    f.f <- df$f.f
+    k <- data.frame(f.f, x)
+    ks <- subset(k, subset = (complete.cases((k))))
+    ct <- cor.test(ks$f.f, ks$x, method = c("spearman"))
+    round(ct[[3]], digits=3)}
+
+feno_cor <- function(x) {
+    feno <- df$feno
+    k <- data.frame(feno, x)
+    ks <- subset(k, subset = (complete.cases((k))))
+    round(cor(ks$feno, ks$x, method = c("spearman")), digits=2)}
+
+feno_cor_test <- function(x) {   
+    feno <- df$feno
+    k <- data.frame(feno, x)
+    ks <- subset(k, subset = (complete.cases((k))))
+    ct <- cor.test(ks$feno, ks$x, method = c("spearman"))
+    round(ct[[3]], digits=3)}
+
+
+
+fano_cor <- function(x) {
+    fano <- df$fano
+    k <- data.frame(fano, x)
+    ks <- subset(k, subset = (complete.cases((k))))
+    round(cor(ks$fano, ks$x, method = c("spearman")), digits=2)}
+
+fano_cor_test <- function(x) {   
+    fano <- df$fano
+    k <- data.frame(fano, x)
+    ks <- subset(k, subset = (complete.cases((k))))
+    ct <- cor.test(ks$fano, ks$x, method = c("spearman"))
+    round(ct[[3]], digits=3)}
+
+
+acq_cor <- function(x) {
+    acq <- df$acq
+    k <- data.frame(acq, x)
+    ks <- subset(k, subset = (complete.cases((k))))
+    round(cor(ks$acq, ks$x, method = c("spearman")), digits=2)}
+
+acq_cor_test <- function(x) {   
+    acq <- df$acq
+    k <- data.frame(acq, x)
+    ks <- subset(k, subset = (complete.cases((k))))
+    ct <- cor.test(ks$acq, ks$x, method = c("spearman"))
+    round(ct[[3]], digits=3)}
+```
+
+Apply it to all ct variables.
+```{r}
+
+corr_coeff_age <- sapply(ct, age_cor)
+corr_p_with_age <- sapply(ct, age_cor_test)
+
+corr_coeff_bmi <- sapply(ct, bmi_cor)
+corr_p_with_bmi <- sapply(ct, bmi_cor_test)
+
+corr_coeff_fev1 <- sapply(ct, fev1_cor)
+corr_p_with_fev1 <- sapply(ct, fev1_cor_test)
+
+corr_coeff_fvc <- sapply(ct, fvc_cor)
+corr_p_with_fvc <- sapply(ct, fvc_cor_test)
+
+corr_coeff_f.f <- sapply(ct, f.f_cor)
+corr_p_with_f.f <- sapply(ct, f.f_cor_test)
+
+corr_coeff_feno <- sapply(ct, feno_cor)
+corr_p_with_feno <- sapply(ct, feno_cor_test)
+
+corr_coeff_fano <- sapply(ct, fano_cor)
+corr_p_with_fano <- sapply(ct, fano_cor_test)
+
+corr_coeff_acq <- sapply(ct, acq_cor)
+corr_p_with_acq <- sapply(ct, acq_cor_test)
+```
+
+Make a summary table.
+```{r}
+correlations <- data.frame(corr_coeff_age, 
+                           corr_p_with_age,
+                           corr_coeff_bmi, 
+                           corr_p_with_bmi,
+                           corr_coeff_acq, 
+                           corr_p_with_acq,
+                           corr_coeff_fev1, 
+                           corr_p_with_fev1,
+                           corr_coeff_fvc,
+                           corr_p_with_fvc,
+                           corr_coeff_f.f, 
+                           corr_p_with_f.f,
+                           corr_coeff_feno, 
+                           corr_p_with_feno,
+                           corr_coeff_fano, 
+                           corr_p_with_fano)
+
+write.csv(correlations, file = "C:/Users/csuehs/Dropbox/SCANN'AIR_fractal_dimension/Submission2_Investigative_Radiology/stats-tables/clinical_correlations.csv")
+write.csv2(correlations, file = "C:/Users/csuehs/Dropbox/SCANN'AIR_fractal_dimension/Submission2_Investigative_Radiology/stats-tables/clinical_correlations_csv2.csv")
+```
+
+
+
+
+
